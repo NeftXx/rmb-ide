@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.neftxx.controller.MainController">
+    <top>
+        <VBox>
+            <MenuBar accessibleRole="PARENT" layoutY="2.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="25.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                <Menu mnemonicParsing="false" text="Archivo">
+                    <Menu mnemonicParsing="false" text="Nuevo">
+                        <MenuItem fx:id="newFileMenuItem" mnemonicParsing="false" text="Archivo" />
+                        <MenuItem fx:id="newProjectMenuItem" mnemonicParsing="false" text="Proyecto" />
+                    </Menu>
+                    <Menu mnemonicParsing="false" text="Abrir">
+                        <MenuItem fx:id="openFileMenuItem" mnemonicParsing="false" text="Archivo" />
+                        <MenuItem fx:id="openProjectMenuItem" mnemonicParsing="false" text="Proyecto" />
+                    </Menu>
+                    <MenuItem fx:id="closeProjectMenuItem" mnemonicParsing="false" text="Cerrar proyecto" />
+                    <MenuItem fx:id="exitMenuItem" mnemonicParsing="false" text="Salir" />
+                </Menu>
+                <Menu mnemonicParsing="false" text="Limpiar">
+                    <MenuItem fx:id="consoleClearMenuItem" mnemonicParsing="false" text="Consola" />
+                    <MenuItem fx:id="tableErrorsClearMenuItem" mnemonicParsing="false" text="Tabla de errores" />
+                    <MenuItem fx:id="tableSymbolsClearMenuItem" mnemonicParsing="false" text="Tabla de simbolos" />
+                    <MenuItem fx:id="allClearMenuItem" mnemonicParsing="false" text="Todo" />
+                </Menu>
+                <Menu mnemonicParsing="false" text="Ayuda">
+                    <MenuItem fx:id="aboutMenuItem" mnemonicParsing="false" text="Sobre..." />
+                </Menu>
+            </MenuBar>
+            <ToolBar prefHeight="40.0" prefWidth="200.0">
+                <Button fx:id="newFileButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Nuevo archivo" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/newFile.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Button fx:id="newProjectButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Crear proyecto" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/newProject.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Button fx:id="openFileButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Abrir archivo" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/rmbFile.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Button fx:id="openProjectButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Abrir proyecto" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/openProject.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Button fx:id="saveFileButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Guardar archivo" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/saveFile.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Separator opacity="0.2" orientation="VERTICAL" prefHeight="40.0" />
+                <Button fx:id="startButton" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Ejecutar proyecto" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/play.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <Button fx:id="saveFolder" mnemonicParsing="false">
+                    <tooltip><Tooltip text="Guardar Proyecto" /></tooltip>
+                    <graphic>
+                        <ImageView fitHeight="24.0" fitWidth="24.0">
+                            <Image url="@../icons/saveFolder.png" />
+                        </ImageView>
+                    </graphic>
+                </Button>
+            </ToolBar>
+        </VBox>
+    </top>
+    <center>
+        <SplitPane dividerPositions="0.18" layoutY="25.0" prefHeight="575.0" prefWidth="800.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="25.0">
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                <SplitPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" orientation="VERTICAL" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="-0.0">
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                        <TreeView fx:id="filesTreeView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                    </AnchorPane>
+                </SplitPane>
+            </AnchorPane>
+            <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                <SplitPane dividerPositions="0.6777583187390543" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" orientation="VERTICAL" prefHeight="573.0" prefWidth="635.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                        <TabPane fx:id="codeAreaLayout" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                    </AnchorPane>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                        <TabPane fx:id="tabReportPane" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                            <Tab text="Consola">
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                    <TextArea fx:id="consoleTextArea" editable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    </TextArea>
+                                </AnchorPane>
+                            </Tab>
+                            <Tab text="Errores">
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                    <TableView fx:id="tableErrors" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                        <columns>
+                                            <TableColumn fx:id="columnTypeError" prefWidth="100.0" text="Tipo"/>
+                                            <TableColumn fx:id="columnDescription" prefWidth="350.0" text="Descripción"/>
+                                            <TableColumn fx:id="columnLine" prefWidth="50.0" text="Fila"/>
+                                            <TableColumn fx:id="columnColumn" prefWidth="50.0" text="Columna"/>
+                                            <TableColumn fx:id="columnFile" prefWidth="150.0" text="Archivo"/>
+                                        </columns>
+                                    </TableView>
+                                </AnchorPane>
+                            </Tab>
+                            <Tab text="Tabla de símbolo">
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                    <TableView fx:id="tableSymbols" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                        <columns>
+                                            <TableColumn fx:id="columnNameSym" prefWidth="200.0" text="Nombre"/>
+                                            <TableColumn fx:id="columnTypeSym" prefWidth="100.0" text="Tipo"/>
+                                            <TableColumn fx:id="columnScopeSym" prefWidth="100.0" text="Ámbito"/>
+                                            <TableColumn fx:id="columnRolSym" prefWidth="100.0" text="Rol"/>
+                                            <TableColumn fx:id="columnParameterSym" prefWidth="200.0" text="Parámetro"/>
+                                            <TableColumn fx:id="columnConstantSym" prefWidth="100.0" text="Constante"/>
+                                        </columns>
+                                    </TableView>
+                                </AnchorPane>
+                            </Tab>
+                        </TabPane>
+                    </AnchorPane>
+                </SplitPane>
+            </AnchorPane>
+        </SplitPane>
+    </center>
+    <stylesheets>
+        <URL value="@../style/root.css" />
+        <URL value="@../style/console.css" />
+        <URL value="@../style/editor.css" />
+        <URL value="@../style/menu.css" />
+        <URL value="@../style/tab_pane.css" />
+        <URL value="@../style/treeView.css" />
+        <URL value="@../style/table.css" />
+        <URL value="@../style/toolbar.css" />
+    </stylesheets>
+</BorderPane>

@@ -1,0 +1,175 @@
+/*****************************************************************
+ * Parser.java
+ *
+ * Copyright ©2019 Ronald Berdúo. All Rights Reserved.
+ * This software is the proprietary information of Ronald Berdúo.
+ *
+ *****************************************************************/
+package com.neftxx.olc;
+
+import com.neftxx.error.ErrorHandler;
+import com.neftxx.util.NodeInfo;
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
+import java_cup.runtime.ComplexSymbolFactory.Location;
+import java.util.ArrayList;
+import org.apache.commons.io.FilenameUtils;
+
+/**
+ *
+ * @author Ronald Berdúo
+ */
+parser code {:
+    /*
+     * nodo resultante
+     */
+    public Olc olc;
+
+    /*
+     * Nombre del archivo que se esta analizando
+     */
+    public String filename;
+
+    /**
+     * Constructor del analizador sintactico
+     *
+     * @param scann  Analizador lexico
+     * @param sf     Fabrica de simbolos
+     */
+    public Parser(Lexer scann, ComplexSymbolFactory sf) {
+        super(scann, sf);
+        filename = scann.filename;
+        olc = null;
+    }
+
+    /**
+     *
+     * Método al que se llama automaticamente ante algun error sintactico.
+     *
+     * @param s simbolo que provoco el error
+     */
+    @Override
+    public void syntax_error(java_cup.runtime.Symbol s) {
+        ComplexSymbol cs = (ComplexSymbol) s;
+        error("No se esperaba el siguiente simbolo: " + cs.getName(), cs.getLeft().getLine(), cs.getRight().getColumn());
+    }
+
+    /**
+     *
+     * Método al que se llama en el momento en que ya no es posible una
+     * recuperacion de errores.
+
+     * @param s simbolo que provoco el error
+     * @throws Exception
+     */
+    @Override
+    public void unrecovered_syntax_error(java_cup.runtime.Symbol s) throws Exception {
+        ComplexSymbol cs = (ComplexSymbol) s;
+        error("Error irrecuperable provocado simbolo: " + cs.getName(), cs.getLeft().getLine(), cs.getRight().getColumn());
+    }
+
+    /**
+     * Guarda los errores en el manejador
+     *
+     * @param message mensaje de por que se provoco el error
+     * @param line linea donde se encuentra el error
+     * @param column columna donde se encuentra el error
+     */
+    private void error(String message, int line, int column) {
+        ErrorHandler.addSyntacticError(message, line, column, FilenameUtils.getName(filename));
+    }
+:};
+
+/* Terminales (tokens devueltos por el escáner). */
+
+/* Palabras claves */
+terminal PROYECTO, RUTA, NOMBRE, CORRER, CONFIGURACION, ARCHIVO, FECHA_MOD, CARPETA;
+
+/* Literales */
+terminal String STRING;
+
+/* Separadores */
+terminal LLAVE_IZQ, LLAVE_DER, DOS_PUNTOS, COMA;
+
+
+/* No Terminales */
+non terminal Olc;
+non terminal OlcProject Project;
+non terminal ArrayList<OlcNode> Block;
+non terminal OlcFile File;
+non terminal OlcFolder Folder;
+
+/* Reglas gramaticales */
+start with Olc;
+
+
+Olc
+    ::= LLAVE_IZQ PROYECTO:a DOS_PUNTOS LLAVE_IZQ Project:Project LLAVE_DER LLAVE_DER {:
+        NodeInfo info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        olc = new Olc(info, Project);
+    :}
+;
+
+Project
+    ::= RUTA DOS_PUNTOS STRING:ruta COMA
+        NOMBRE DOS_PUNTOS STRING:nombre COMA
+        CORRER DOS_PUNTOS STRING:correr COMA
+        CONFIGURACION DOS_PUNTOS LLAVE_IZQ Block:block LLAVE_DER {:
+            NodeInfo info = new NodeInfo(rutaxleft.getLine(), rutaxright.getColumn(), filename);
+            RESULT = new OlcProject(info, ruta, nombre, correr, block);
+        :}
+    |   RUTA DOS_PUNTOS STRING:ruta COMA
+        NOMBRE DOS_PUNTOS STRING:nombre COMA
+        CORRER DOS_PUNTOS STRING:correr COMA
+        CONFIGURACION DOS_PUNTOS LLAVE_IZQ LLAVE_DER {:
+            NodeInfo info = new NodeInfo(rutaxleft.getLine(), rutaxright.getColumn(), filename);
+            RESULT = new OlcProject(info, ruta, nombre, correr, new ArrayList<>());
+        :}
+;
+
+Block
+    ::= Block:list COMA File:file {:
+        list.add(file);
+        RESULT = list;
+    :}
+    |   Block:list COMA Folder:folder {:
+        list.add(folder);
+        RESULT = list;
+    :}
+    |   File:file {:
+        ArrayList<OlcNode> list = new ArrayList<>();
+        list.add(file);
+        RESULT = list;
+    :}
+    |   Folder:folder {:
+        ArrayList<OlcNode> list = new ArrayList<>();
+        list.add(folder);
+        RESULT = list;
+    :}
+;
+
+File
+    ::= ARCHIVO:a DOS_PUNTOS LLAVE_IZQ
+            NOMBRE DOS_PUNTOS STRING:nombre COMA
+            FECHA_MOD DOS_PUNTOS STRING:fecha
+        LLAVE_DER {:
+            NodeInfo info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+            RESULT = new OlcFile(info, nombre, fecha);
+        :}
+;
+
+Folder
+    ::= CARPETA:a DOS_PUNTOS LLAVE_IZQ
+            NOMBRE DOS_PUNTOS STRING:nombre COMA
+            Block:block
+        LLAVE_DER {:
+            NodeInfo info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+            RESULT = new OlcFolder(info, nombre, block);
+        :}
+    |   CARPETA:a DOS_PUNTOS LLAVE_IZQ
+            NOMBRE DOS_PUNTOS STRING:nombre
+        LLAVE_DER {:
+            NodeInfo info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+            RESULT = new OlcFolder(info, nombre, new ArrayList<>());
+        :}
+;

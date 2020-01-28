@@ -1,0 +1,998 @@
+/*****************************************************************
+ * Parser.java
+ *
+ * Copyright ©2019 Ronald Berdúo. All Rights Reserved.
+ * This software is the proprietary information of Ronald Berdúo.
+ *
+ *****************************************************************/
+package com.neftxx.evaluator;
+
+import com.neftxx.ast.*;
+import com.neftxx.ast.expression.*;
+import com.neftxx.ast.expression.array.*;
+import com.neftxx.ast.expression.operation.*;
+import com.neftxx.ast.gui.AccessToGuiMethodExp;
+import com.neftxx.ast.gui.AccessToGuiMethodStat;
+import com.neftxx.ast.gui.AltoAnchoFunction;
+import com.neftxx.ast.gui.RmensajeFunction;
+import com.neftxx.ast.primitive.file.*;
+import com.neftxx.ast.statement.Block;
+import com.neftxx.ast.statement.*;
+import com.neftxx.ast.statement.field.*;
+import com.neftxx.ast.statement.fusion.Fusion;
+import com.neftxx.ast.statement.ifStm.*;
+import com.neftxx.ast.statement.loopStm.*;
+import com.neftxx.ast.statement.method.*;
+import com.neftxx.ast.primitive.*;
+import com.neftxx.ast.statement.switchStm.*;
+import com.neftxx.error.ErrorHandler;
+import com.neftxx.type.*;
+import com.neftxx.util.NodeInfo;
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
+import java_cup.runtime.ComplexSymbolFactory.Location;
+import java.util.ArrayList;
+import org.apache.commons.io.FilenameUtils;
+
+/**
+ *
+ * @author Ronald Berdúo
+ */
+parser code {:
+    /*
+     * Programa resultante
+     */
+    public Program program;
+
+    /*
+     * Nombre del archivo que se esta analizando
+     */
+    public String filename;
+
+    /**
+     * Constructor del analizador sintactico
+     *
+     * @param scann  Analizador lexico
+     * @param sf     Fabrica de simbolos
+     */
+    public Parser(Lexer scann, ComplexSymbolFactory sf) {
+        super(scann, sf);
+        filename = scann.filename;
+        program = null;
+    }
+
+    /**
+     *
+     * Método al que se llama automaticamente ante algun error sintactico.
+     *
+     * @param s simbolo que provoco el error
+     */
+    @Override
+    public void syntax_error(java_cup.runtime.Symbol s) {
+        ComplexSymbol cs = (ComplexSymbol) s;
+        error("No se esperaba el siguiente simbolo: " + cs.getName(), cs.getLeft().getLine(), cs.getRight().getColumn());
+    }
+
+    /**
+     *
+     * Método al que se llama en el momento en que ya no es posible una
+     * recuperacion de errores.
+
+     * @param s simbolo que provoco el error
+     * @throws Exception
+     */
+    @Override
+    public void unrecovered_syntax_error(java_cup.runtime.Symbol s) throws Exception {
+        ComplexSymbol cs = (ComplexSymbol) s;
+        error("Error irrecuperable provocado simbolo: " + cs.getName(), cs.getLeft().getLine(), cs.getRight().getColumn());
+    }
+
+    /**
+     * Guarda los errores en el manejador
+     *
+     * @param message mensaje de por que se provoco el error
+     * @param line linea donde se encuentra el error
+     * @param column columna donde se encuentra el error
+     */
+    private void error(String message, int line, int column) {
+        ErrorHandler.addSyntacticError(message, line, column, FilenameUtils.getName(filename));
+    }
+:};
+
+/* Terminales (tokens devueltos por el escáner). */
+
+/* Palabras claves */
+terminal ZRO, ENT, CHR, DEC, BUL, IF, WHILE, FOR, REPEAT, SWITCH, CASE,
+         DEFAULT, ROMPER, SIGA, DEFINIR, FUSION, IMPORTAR, REGRESAR, WHEN, NULL, ELSE;
+
+/* Literales */
+terminal Integer LIT_ENTERO;
+terminal Double LIT_DECIMAL;
+terminal Boolean LIT_BOOLEANO;
+terminal Character LIT_CHAR;
+terminal String LIT_STRING;
+terminal String ID;
+
+/* Separadores */
+terminal MAS, MENOS, MULT, DIV, MODULO, POTENCIA, IGUAL, IGUAL_IGUAL, DIFERENTE_QUE,
+         MAYOR_IGUAL_QUE, MAYOR_QUE, MENOR_IGUAL_QUE, MENOR_QUE,
+         AND, OR, NOT, PAR_IZQ, PAR_DER, COR_IZQ, COR_DER, PUNTO_COMA,
+         COMA, PUNTO, LLAVE_IZQ, LLAVE_DER, UMENOS, REFERENCIA, INCREMENTO, DECREMENTO, DOS_PUNTOS;
+
+/* functions */
+terminal IMP, PESO_DE, RESERVAR, NUEVO_GUI, ABRIR_VENTANA, RMENSAJE, ATXT, CONC, AENT,
+         ADEC, EQLS, ALTO_ANCHO, WRITE, WF, CLOSE, APEND, READ;
+
+
+/* No Terminales */
+non terminal Program Program;
+non terminal ArrayList<AstNode> GlobalStatements;
+non terminal AstNode GlobalStatement;
+non terminal Fusion Fusion;
+non terminal ConstantDeclaration ConstantDeclaration;
+non terminal RmbImport ImportDeclaration;
+non terminal ArrayList<VarDeclaration> VarDeclarations;
+non terminal VarDeclaration VarDeclaration;
+non terminal MethodStm Function;
+non terminal ArrayList<Parameter> Parameters;
+non terminal Parameter Parameter;
+non terminal Block Block;
+non terminal ArrayList<AstNode> LocalStatements;
+non terminal AstNode LocalStatement;
+non terminal FieldDeclaration FieldDeclaration;
+non terminal FieldDeclaration VarDeclarator;
+non terminal FieldDeclaration VarDeclaratorId;
+non terminal AstNode VarAssignment;
+non terminal ArrayList<AstNode> FieldAccess;
+non terminal ArrayAccess ArrayAccess;
+non terminal ImpFunction ImpFunction;
+non terminal RmensajeFunction RmensajeFunction;
+non terminal PesoDeFunction PesoDeFunction;
+non terminal ReservarFunction ReservarFunction;
+non terminal NuevoGuiFunction NuevoGuiFunction;
+non terminal AbrirVentanaFunction AbrirVentanaFunction;
+non terminal AltoAnchoFunction AltoAnchoFunction;
+non terminal ATxtFunction ATxtFunction;
+non terminal ConcFunction ConcFunction;
+non terminal AEntFunction AEntFunction;
+non terminal ADecFunction ADecFunction;
+non terminal EqlsFunction EqlsFunction;
+non terminal GuiFunction GuiFunction;
+non terminal AppendFunction AppendFunction;
+non terminal CloseFunction  CloseFunction;
+non terminal ReadFunction   ReadFunction;
+non terminal WFFunction     WFFunction;
+non terminal WriteFunction  WriteFunction;
+non terminal ArrayList<Expression> ListExpressions;
+non terminal ArrayType ArrayType;
+non terminal RmbType Type;
+non terminal MethodCall MethodCall;
+non terminal WhileStm WhileStm;
+non terminal ReturnStm ReturnStm;
+non terminal RepeatStm RepeatStm;
+non terminal ForStm ForStm;
+non terminal AstNode ForAssignment;
+non terminal Expression ForCondition;
+non terminal AstNode ForCounter;
+non terminal IfStm IfStmSup;
+non terminal SubIfStm IfStm;
+non terminal ArrayList<SubIfStm> ListElseIfStm;
+non terminal SubIfStm ElseIfStm;
+non terminal SubIfStm ElseStm;
+non terminal ArrayInitializer ArrayInitializer;
+non terminal ArrayInitializerAccess ArrayInitializerAccess;
+non terminal IncreaseDecrease IncreaseDecrease;
+non terminal SwitchStm SwitchStm;
+non terminal ArrayList<CaseStm> SwitchLabels;
+non terminal CaseStm SwitchLabel;
+non terminal Expression Expression;
+
+                                /* Precedencias */
+
+/*Asociatividad */                          /* Operador */                                  /* Nivel */
+precedence left     OR;                                                                     // 9
+precedence left     AND;                                                                    // 8
+precedence left     DIFERENTE_QUE, IGUAL_IGUAL;                                             // 7
+precedence nonassoc MAYOR_IGUAL_QUE, MAYOR_QUE, MENOR_IGUAL_QUE, MENOR_QUE;                 // 6
+precedence left     MAS, MENOS;                                                             // 5
+precedence left     MULT, DIV, MODULO;                                                      // 4
+precedence left     POTENCIA;                                                               // 3
+precedence right    REFERENCIA, UMENOS, NOT, INCREMENTO, DECREMENTO;                        // 2
+precedence left     COR_IZQ, COR_DER, PUNTO, PAR_IZQ, PAR_DER;                              // 1
+
+/* Reglas gramaticales */
+start with Program;
+
+
+Program
+    ::= GlobalStatements:statements {:
+            program = new Program(new NodeInfo(statementsxleft.getLine(), statementsxright.getColumn(), filename), statements);
+        :}
+;
+
+GlobalStatements
+    ::= GlobalStatements:statements GlobalStatement:statement {:
+            RESULT = statements;
+            if (statement != null) {
+                RESULT.add(statement);
+            }
+        :}
+    |   GlobalStatement:statement {:
+            RESULT = new ArrayList<>();
+            if (statement != null) {
+                RESULT.add(statement);
+            }
+        :}
+;
+
+GlobalStatement
+    ::= Function:a {: RESULT = a; :}
+    |   FieldDeclaration:a {: RESULT = a; :}
+    |   Fusion:a {: RESULT = a; :}
+    |   ConstantDeclaration:a {: RESULT = a; :}
+    |   ImportDeclaration:a {: RESULT = a; :}
+    |   GuiFunction:a {: RESULT = a; :}
+    |   error PUNTO_COMA
+;
+
+ImportDeclaration
+    ::= IMPORTAR:a LIT_STRING:path PUNTO_COMA {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new RmbImport(info, path);
+    :}
+    |   IMPORTAR:a LIT_STRING:path {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new RmbImport(info, path);
+    :}
+;
+
+ConstantDeclaration
+    ::= DEFINIR ID:id Expression:expression PUNTO_COMA {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new ConstantDeclaration(info, id, expression);
+    :}
+    |   DEFINIR ID:id Expression:expression {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new ConstantDeclaration(info, id, expression);
+    :}
+;
+
+Fusion
+    ::= FUSION ID:id LLAVE_IZQ VarDeclarations:declarations LLAVE_DER PUNTO_COMA {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new Fusion(info, id, declarations);
+    :}
+    |   FUSION ID:id LLAVE_IZQ VarDeclarations:declarations LLAVE_DER {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new Fusion(info, id, declarations);
+    :}
+;
+
+GuiFunction
+    ::= ZRO ID:id1 DOS_PUNTOS ID:id2 PAR_IZQ PAR_DER  Block:block {:
+        var info = new NodeInfo(id2xleft.getLine(), id2xright.getColumn(), filename);
+        RESULT = new GuiFunction(info, id1, id2, block);
+    :}
+;
+
+VarDeclarations
+    ::= VarDeclarations:declarations VarDeclaration:declaration PUNTO_COMA {:
+            RESULT = declarations;
+            RESULT.add(declaration);
+        :}
+    |   VarDeclaration:declaration PUNTO_COMA {:
+            RESULT = new ArrayList<>();
+            RESULT.add(declaration);
+        :}
+;
+
+VarDeclaration
+    ::= VarDeclaration:varId COR_IZQ Expression:expression COR_DER {:
+            RESULT = varId;
+            RESULT.addDimension(new Dimension(expression));
+        :}
+    |   VarDeclaration:varId COR_IZQ COR_DER {:
+            RESULT = varId;
+            RESULT.addDimension(new Dimension());
+        :}
+    |   Type:type ID:id {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new VarDeclaration(info, type, id);
+        :}
+;
+
+Function
+    ::= Type:type ID:id PAR_IZQ Parameters:parameters PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, type, id, parameters, block);
+        :}
+    |   ArrayType:type ID:id PAR_IZQ Parameters:parameters PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, type, id, parameters, block);
+        :}
+    |   ZRO ID:id PAR_IZQ Parameters:parameters PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, VoidType.ZRO, id, parameters, block);
+        :}
+    |   Type:type ID:id PAR_IZQ PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, type, id, new ArrayList<>(), block);
+        :}
+    |   ZRO ID:id PAR_IZQ PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, VoidType.ZRO, id, new ArrayList<>(), block);
+        :}
+    |   ArrayType:type ID:id PAR_IZQ PAR_DER Block:block {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new MethodStm(info, type, id, new ArrayList<>(), block);
+        :}
+;
+
+Parameters
+    ::= Parameters:parameters COMA Parameter:parameter {:
+            RESULT = parameters;
+            parameter.createType();
+            RESULT.add(parameter);
+        :}
+    |   Parameter:parameter {:
+            RESULT = new ArrayList<>();
+            parameter.createType();
+            RESULT.add(parameter);
+        :}
+;
+
+Parameter
+    ::= Type:type ID:id {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new Parameter(info, type, id);
+        :}
+    |   Parameter:parameter COR_IZQ COR_DER {:
+            parameter.numberDim++;
+            RESULT = parameter;
+        :}
+;
+
+Block
+    ::= LLAVE_IZQ:a LLAVE_DER {:
+            RESULT = new Block(new NodeInfo(axleft.getLine(), axright.getColumn(), filename));
+        :}
+    |   LLAVE_IZQ LocalStatements:a LLAVE_DER {:
+            RESULT = new Block(new NodeInfo(axleft.getLine(), axright.getColumn(), filename), a);
+        :}
+;
+
+LocalStatements
+    ::= LocalStatements:statements LocalStatement:statement {:
+        RESULT = statements;
+        if (statement != null) {
+            RESULT.add(statement);
+        }
+    :}
+    |   LocalStatement:statement {:
+        RESULT = new ArrayList<>();
+        if (statement != null) {
+            RESULT.add(statement);
+        }
+    :}
+;
+
+LocalStatement
+    ::= ImpFunction:a {: RESULT = a; :}
+    |   RmensajeFunction:a {: RESULT = a; :}
+    |   FieldDeclaration:a {: RESULT = a; :}
+    |   VarAssignment:a {: RESULT = a; :}
+    |   PesoDeFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   ReservarFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   NuevoGuiFunction:a {: RESULT = a; :}
+    |   AbrirVentanaFunction:a {: RESULT = a; :}
+    |   MethodCall:a PUNTO_COMA {: RESULT = a; :}
+    |   ATxtFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   ConcFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   AEntFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   ADecFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   EqlsFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   AppendFunction:a PUNTO_COMA {: RESULT = a; :}
+    |   CloseFunction:a PUNTO_COMA  {: RESULT = a; :}
+    |   ReadFunction:a PUNTO_COMA   {: RESULT = a; :}
+    |   WFFunction:a PUNTO_COMA     {: RESULT = a; :}
+    |   WriteFunction:a PUNTO_COMA  {: RESULT = a; :}
+    |   AltoAnchoFunction:a {: RESULT = a; :}
+    |   ReturnStm:a {: RESULT = a; :}
+    |   SIGA:a PUNTO_COMA {:
+        RESULT = new ContinueStm(new NodeInfo(axleft.getLine(), axright.getColumn(), filename));
+    :}
+    |   ROMPER:a PUNTO_COMA {:
+        RESULT = new BreakStm(new NodeInfo(axleft.getLine(), axright.getColumn(),filename));
+    :}
+    |   WhileStm:a {: RESULT = a; :}
+    |   IfStmSup:a {: RESULT = a; :}
+    |   ForStm:a {: RESULT = a; :}
+    |   RepeatStm:a {: RESULT = a; :}
+    |   SwitchStm:a {: RESULT = a; :}
+    |   error PUNTO_COMA
+;
+
+FieldDeclaration
+    ::= VarDeclarator:field PUNTO_COMA {:
+        RESULT = field;
+    :}
+;
+
+VarDeclarator
+    ::= VarDeclaratorId:varId IGUAL Expression:expression {:
+        RESULT = varId;
+        RESULT.setExpression(expression);
+    :}
+    |   VarDeclaratorId:varId {:
+        RESULT = varId;
+    :}
+;
+
+VarDeclaratorId
+    ::= VarDeclaratorId:varId COR_IZQ Expression:expression COR_DER {:
+        RESULT = varId;
+        RESULT.addDimension(new Dimension(expression));
+    :}
+    |   VarDeclaratorId:varId COR_IZQ COR_DER {:
+        RESULT = varId;
+        RESULT.addDimension(new Dimension());
+    :}
+    |   Type:type ID:id {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new FieldDeclaration(info, type, id);
+    :}
+;
+
+VarAssignment
+    ::= FieldAccess:id IGUAL Expression:expression PUNTO_COMA {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var fieldAccess = new FieldAccess(info, id);
+        RESULT = new VarAssignment(info, fieldAccess, expression);
+    :}
+    |   FieldAccess:id PUNTO ID:method PAR_IZQ PAR_DER PUNTO_COMA {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            var fieldAccess = new FieldAccess(info, id);
+            RESULT = new AccessToGuiMethodStat(info, fieldAccess, method, new ArrayList<>());
+        :}
+    |   FieldAccess:id PUNTO ID:method PAR_IZQ ListExpressions:list PAR_DER PUNTO_COMA {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            var fieldAccess = new FieldAccess(info, id);
+            RESULT = new AccessToGuiMethodStat(info, fieldAccess, method, list);
+        :}
+    |   FieldAccess:id INCREMENTO PUNTO_COMA {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            var fieldAccess = new FieldAccess(info, id);
+            RESULT = new IncreaseDecreaseStm(info, fieldAccess, IncreaseDecreaseStm.Operator.INCREASE);
+        :}
+    |   FieldAccess:id DECREMENTO PUNTO_COMA {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            var fieldAccess = new FieldAccess(info, id);
+            RESULT = new IncreaseDecreaseStm(info, fieldAccess, IncreaseDecreaseStm.Operator.DECREASE);
+        :}
+
+;
+
+FieldAccess
+    ::= FieldAccess:list PUNTO ID:id {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var identifier = new Identifier(info, id);
+        RESULT = list;
+        RESULT.add(identifier);
+    :}
+    |   FieldAccess:list PUNTO ArrayAccess:id {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = list;
+        RESULT.add(id);
+    :}
+    |   ID:id {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var identifier = new Identifier(info, id);
+        RESULT = new ArrayList<>();
+        RESULT.add(identifier);
+    :}
+    |   ArrayAccess:id {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new ArrayList<>();
+        RESULT.add(id);
+    :}
+;
+
+ArrayAccess
+    ::= ArrayAccess:arrayAccess COR_IZQ Expression:exp COR_DER {:
+        RESULT = arrayAccess;
+        RESULT.addDimension(new Dimension(exp));
+    :}
+    |   ID:id COR_IZQ Expression:exp COR_DER {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new ArrayAccess(info, id);
+        RESULT.addDimension(new Dimension(exp));
+    :}
+;
+
+AppendFunction
+    ::= APEND:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new AppendFunction(info, exp);
+    :}
+;
+
+CloseFunction
+    ::= CLOSE:r PAR_IZQ PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new CloseFunction(info);
+    :}
+;
+
+ReadFunction
+    ::= READ:r PAR_IZQ Expression:exp COMA ID:id PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new ReadFunction(info, exp, id);
+    :}
+;
+
+WFFunction
+    ::= WF:r PAR_IZQ ListExpressions:list PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new WFFunction(info, list);
+    :}
+;
+
+WriteFunction
+    ::= WRITE:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new WriteFunction(info, exp);
+    :}
+;
+
+
+ImpFunction
+    ::= IMP:imp PAR_IZQ ListExpressions:list PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(impxleft.getLine(), impxright.getColumn(), filename);
+        RESULT = new ImpFunction(info, list);
+    :}
+;
+
+AltoAnchoFunction
+    ::= ALTO_ANCHO:r PAR_IZQ Expression:exp1 COMA Expression:exp2 PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new AltoAnchoFunction(info, exp1, exp2);
+    :}
+;
+
+RmensajeFunction
+    ::= RMENSAJE:r PAR_IZQ ListExpressions:list PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new RmensajeFunction(info, list);
+    :}
+;
+
+ATxtFunction
+    ::= ATXT:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new ATxtFunction(info, exp);
+    :}
+;
+
+ConcFunction
+    ::= CONC:r PAR_IZQ Expression:exp1 COMA Expression:exp2 PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new ConcFunction(info, exp1, exp2);
+    :}
+;
+
+AEntFunction
+    ::= AENT:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new AEntFunction(info, exp);
+    :}
+;
+
+ADecFunction
+    ::= ADEC:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new ADecFunction(info, exp);
+    :}
+;
+
+EqlsFunction
+    ::= EQLS:r PAR_IZQ Expression:exp1 COMA Expression:exp2 PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new EqlsFunction(info, exp1, exp2);
+    :}
+;
+
+
+PesoDeFunction
+    ::= PESO_DE:f PAR_IZQ ID:id PAR_DER {:
+        var info = new NodeInfo(fxleft.getLine(), fxright.getColumn(), filename);
+        RESULT = new PesoDeFunction(info, id);
+    :}
+;
+
+ReservarFunction
+    ::= RESERVAR:r PAR_IZQ Expression:exp PAR_DER {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new ReservarFunction(info, exp);
+    :}
+;
+
+NuevoGuiFunction
+    ::= NUEVO_GUI:r PAR_IZQ ID:id PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new NuevoGuiFunction(info, id);
+    :}
+;
+
+AbrirVentanaFunction
+    ::= ABRIR_VENTANA:r PAR_IZQ ID:id PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(rxleft.getLine(), rxright.getColumn(), filename);
+        RESULT = new AbrirVentanaFunction(info, id);
+    :}
+;
+
+ListExpressions
+    ::= ListExpressions:list COMA Expression:expression {:
+        RESULT = list;
+        RESULT.add(expression);
+    :}
+    |   Expression:expression {:
+        RESULT = new ArrayList<>();
+        RESULT.add(expression);
+    :}
+;
+
+ArrayType
+    ::= ArrayType:type COR_IZQ COR_DER {:
+        type.numberDim++;
+        RESULT = type;
+    :}
+    |   Type:type COR_IZQ COR_DER {:
+        RESULT = new ArrayType(1, type);
+    :}
+;
+
+Type
+    ::= ENT      {: RESULT = PrimitiveType.ENT; :}
+    |   DEC      {: RESULT = PrimitiveType.DEC; :}
+    |   CHR      {: RESULT = PrimitiveType.CHR; :}
+    |   BUL      {: RESULT = PrimitiveType.BUL; :}
+    |   ID:name  {:
+        if (name.equals("Rlbl")) {
+            RESULT = ComponentType.RMB_LABEL;
+        } else if(name.equals("Rtxt")) {
+            RESULT = ComponentType.RMB_TEXT_FIELD;
+        } else if(name.equals("RtxtA")) {
+            RESULT = ComponentType.RMB_TEXT_AREA;
+        } else if(name.equals("RtxtP")) {
+            RESULT = ComponentType.RMB_PASSWORD_FIELD;
+        } else if(name.equals("RtxtN")) {
+            RESULT = ComponentType.RMB_NUMERIC_FIELD;
+        } else if(name.equals("Rbton")) {
+            RESULT = ComponentType.RMB_BUTTON;
+        } else if (name.equals("Rstring")) {
+            RESULT = StringType.R_STRING;
+        } else {
+            RESULT = new FusionType(name);
+        }
+    :}
+;
+
+MethodCall
+    ::= ID:id PAR_IZQ PAR_DER {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new MethodCall(info, id);
+    :}
+    |   ID:id PAR_IZQ ListExpressions:exps PAR_DER {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        RESULT = new MethodCall(info, id, exps);
+    :}
+;
+
+WhileStm
+    ::= WHILE:op PAR_IZQ Expression:exp PAR_DER Block:block {:
+        var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+        RESULT = new WhileStm(info, exp, block);
+    :}
+;
+
+RepeatStm
+    ::= REPEAT:op Block:block WHEN PAR_IZQ Expression:exp PAR_DER PUNTO_COMA {:
+        var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+        RESULT = new RepeatStm(info, exp, block);
+    :}
+;
+
+ForStm
+    ::= FOR:op PAR_IZQ ForAssignment:a ForCondition:b ForCounter:c PAR_DER Block:block {:
+        var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+        RESULT = new ForStm(info, a, b, c, block);
+    :}
+;
+
+ForAssignment
+    ::= FieldDeclaration:a {: RESULT = a; :}
+    |   VarAssignment:a {: RESULT = a; :}
+;
+
+ForCondition
+    ::= Expression:a PUNTO_COMA {: RESULT = a; :}
+;
+
+ForCounter
+    ::= FieldAccess:id IGUAL Expression:expression {:
+        var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var fieldAccess = new FieldAccess(info, id);
+        RESULT = new VarAssignment(info, fieldAccess, expression);
+    :}
+    |   ID:id INCREMENTO:a {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        var infoId = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var exp = new Identifier(infoId, id);
+        RESULT = new IncreaseDecrease(info, exp, IncreaseDecrease.Operator.INCREASE);
+    :}
+    |   ID:id DECREMENTO:a {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        var infoId = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+        var exp = new Identifier(infoId, id);
+        RESULT = new IncreaseDecrease(info, exp, IncreaseDecrease.Operator.DECREASE);
+    :}
+;
+
+SwitchStm
+    ::= SWITCH:a PAR_IZQ Expression:exp PAR_DER LLAVE_IZQ SwitchLabels:labels LLAVE_DER {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new SwitchStm(info, exp, labels);
+    :}
+    |   SWITCH:a PAR_IZQ Expression:exp PAR_DER LLAVE_IZQ LLAVE_DER {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new SwitchStm(info, exp, null);
+    :}
+;
+
+SwitchLabels
+    ::= SwitchLabels:labels SwitchLabel:label {:
+        RESULT = labels;
+        RESULT.add(label);
+    :}
+    |   SwitchLabel:label {:
+        RESULT = new ArrayList<>();
+        RESULT.add(label);
+    :}
+;
+
+SwitchLabel
+    ::= CASE:a Expression:e DOS_PUNTOS LocalStatements:s {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new CaseStm(info, e, s);
+    :}
+    |   CASE:a Expression:e DOS_PUNTOS {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new CaseStm(info, e, null);
+    :}
+    |   DEFAULT:a DOS_PUNTOS LocalStatements:s {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new CaseStm(info, null, s);
+    :}
+    |   DEFAULT:a DOS_PUNTOS {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new CaseStm(info, null, null);
+    :}
+;
+
+IfStmSup
+    ::= IfStm:a {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IfStm(info, a);
+    :}
+    |   IfStm:a ListElseIfStm:b {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IfStm(info, a, b);
+    :}
+    |   IfStm:a ListElseIfStm:b ElseStm:c {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IfStm(info, a, b, c);
+    :}
+    |   IfStm:a ElseStm:b {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IfStm(info, a, b);
+    :}
+;
+
+IfStm
+    ::= IF:a PAR_IZQ Expression:b PAR_DER Block:c {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new SubIfStm(info, b, c);
+    :}
+;
+
+ListElseIfStm
+    ::= ListElseIfStm:a ElseIfStm:b {:
+        RESULT = a;
+        RESULT.add(b);
+    :}
+    |   ElseIfStm:a {:
+        RESULT = new ArrayList<>();
+        RESULT.add(a);
+    :}
+;
+
+ElseIfStm
+    ::= ELSE:a IF PAR_IZQ Expression:b PAR_DER Block:c {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new SubIfStm(info, b, c);
+    :}
+;
+
+ElseStm
+    ::= ELSE:a Block:b {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new SubIfStm(info, b);
+    :}
+;
+
+
+ReturnStm
+    ::= REGRESAR:a Expression:exp PUNTO_COMA {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new ReturnStm(info, exp);
+    :}
+    |   REGRESAR:a PUNTO_COMA {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new ReturnStm(info);
+    :}
+;
+
+ArrayInitializer
+    ::= LLAVE_IZQ:a ListExpressions:expressions LLAVE_DER {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new ArrayInitializer(info, expressions);
+    :}
+;
+
+ArrayInitializerAccess
+    ::= ArrayInitializerAccess:access COR_IZQ Expression:expression COR_DER {:
+        RESULT = access;
+        RESULT.addDimension(new Dimension(expression));
+    :}
+    |   ArrayInitializer:a COR_IZQ Expression:expression COR_DER {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new ArrayInitializerAccess(info, a);
+        RESULT.addDimension(new Dimension(expression));
+    :}
+;
+
+IncreaseDecrease
+    ::= Expression:exp INCREMENTO:a {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IncreaseDecrease(info, exp, IncreaseDecrease.Operator.INCREASE);
+    :}
+    |   Expression:exp DECREMENTO:a {:
+        var info = new NodeInfo(axleft.getLine(), axright.getColumn(), filename);
+        RESULT = new IncreaseDecrease(info, exp, IncreaseDecrease.Operator.DECREASE);
+    :}
+;
+
+Expression
+    ::= Expression:e1 MAS:mas Expression:e2 {:
+            var info = new NodeInfo(masxleft.getLine(), masxright.getColumn(), filename);
+            RESULT = new Arithmetic(info, e1, e2, Arithmetic.Operator.ADDITION);
+        :}
+    |   Expression:e1 MENOS:menos Expression:e2 {:
+            var info = new NodeInfo(menosxleft.getLine(), menosxright.getColumn(), filename);
+            RESULT = new Arithmetic(info, e1, e2, Arithmetic.Operator.SUBTRACTION);
+        :}
+    |   Expression:e1 MULT:mult Expression:e2 {:
+            var info = new NodeInfo(multxleft.getLine(), multxright.getColumn(), filename);
+            RESULT = new Arithmetic(info, e1, e2, Arithmetic.Operator.MULTIPLICATION);
+        :}
+    |   Expression:e1 DIV:div Expression:e2 {:
+            var info = new NodeInfo(divxleft.getLine(), divxright.getColumn(), filename);
+            RESULT = new Arithmetic(info, e1, e2, Arithmetic.Operator.DIVISION);
+        :}
+    |   Expression:e1 POTENCIA:pot Expression:e2 {:
+            var info = new NodeInfo(potxleft.getLine(), potxright.getColumn(), filename);
+            RESULT = new Pow(info, e1, e2);
+        :}
+    |   Expression:e1 MODULO:mod Expression:e2 {:
+            var info = new NodeInfo(modxleft.getLine(), modxright.getColumn(), filename);
+            RESULT = new Arithmetic(info, e1, e2, Arithmetic.Operator.MODULE);
+        :}
+    |   Expression:e1 OR:or Expression:e2 {:
+            var info = new NodeInfo(orxleft.getLine(), orxright.getColumn(), filename);
+            RESULT = new Logical(info, e1, e2, Logical.Operator.OR);
+        :}
+    |   Expression:e1 AND:and Expression:e2 {:
+            var info = new NodeInfo(andxleft.getLine(), andxright.getColumn(), filename);
+            RESULT = new Logical(info, e1, e2, Logical.Operator.AND);
+        :}
+    |   Expression:e1 DIFERENTE_QUE:dif Expression:e2 {:
+            var info = new NodeInfo(difxleft.getLine(), difxright.getColumn(), filename);
+            RESULT = new Comparator(info, e1, e2, Comparator.Operator.NOT_EQUAL_TO);
+        :}
+    |   Expression:e1 IGUAL_IGUAL:ig Expression:e2 {:
+            var info = new NodeInfo(igxleft.getLine(), igxright.getColumn(), filename);
+            RESULT = new Comparator(info, e1, e2, Comparator.Operator.EQUAL_TO);
+        :}
+    |   Expression:e1 MAYOR_IGUAL_QUE:op Expression:e2 {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Relational(info, e1, e2, Relational.Operator.GREATER_THAN_OR_EQUAL_TO);
+        :}
+    |   Expression:e1 MAYOR_QUE:op Expression:e2 {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Relational(info, e1, e2, Relational.Operator.GREATER_THAN);
+        :}
+    |   Expression:e1 MENOR_IGUAL_QUE:op Expression:e2 {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Relational(info, e1, e2, Relational.Operator.LESS_THAN_OR_EQUAL_TO);
+        :}
+    |   Expression:e1 MENOR_QUE:op Expression:e2 {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Relational(info, e1, e2, Relational.Operator.LESS_THAN);
+        :}
+    |   MENOS:op Expression:expression {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new UMinus(info, expression);
+        :} %prec UMENOS
+    |   NOT:op Expression:expression {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Not(info, expression);
+        :} %prec NOT
+    |   MULT:op Expression:expression {:
+            var info = new NodeInfo(opxleft.getLine(), opxright.getColumn(), filename);
+            RESULT = new Reference(info, expression);
+        :} %prec REFERENCIA
+    |   PAR_IZQ Expression:expression PAR_DER {: RESULT = expression; :}
+    |   PesoDeFunction:function {: RESULT = function; :}
+    |   ReservarFunction:function {: RESULT = function; :}
+    |   MethodCall:function {: RESULT = function; :}
+    |   ATxtFunction:function {: RESULT = function; :}
+    |   AEntFunction:function {: RESULT = function; :}
+    |   ADecFunction:function {: RESULT = function; :}
+    |   EqlsFunction:function {: RESULT = function; :}
+    |   ArrayAccess:node {: RESULT = node; :}
+    |   ArrayInitializer:node {: RESULT = node; :}
+    |   ArrayInitializerAccess:node {: RESULT = node; :}
+    |   Expression:expression PUNTO ID:id {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            var identifier = new Identifier(info, id);
+            RESULT = new VarAccess(info, expression, identifier);
+        :}
+    |   Expression:expression PUNTO ID:id PAR_IZQ ListExpressions:parameters PAR_DER {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new AccessToGuiMethodExp(info, expression, id, parameters);
+        :}
+    |   Expression:expression PUNTO ID:id PAR_IZQ PAR_DER {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new AccessToGuiMethodExp(info, expression, id, new ArrayList<>());
+        :}
+    |   Expression:expression PUNTO ArrayAccess:id {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new VarAccess(info, expression, id);
+        :}
+    |   ID:id {:
+            var info = new NodeInfo(idxleft.getLine(), idxright.getColumn(), filename);
+            RESULT = new Identifier(info, id);
+        :}
+    |   LIT_BOOLEANO:lit {:
+            var info = new NodeInfo(litxleft.getLine(), litxright.getColumn(), filename);
+            RESULT = new Literal(info, PrimitiveType.BUL, lit);
+        :}
+    |   LIT_CHAR:lit {:
+            var info = new NodeInfo(litxleft.getLine(), litxright.getColumn(), filename);
+            RESULT = new Literal(info, PrimitiveType.CHR, lit);
+        :}
+    |   LIT_DECIMAL:lit {:
+            var info = new NodeInfo(litxleft.getLine(), litxright.getColumn(), filename);
+            RESULT = new Literal(info, PrimitiveType.DEC, lit);
+        :}
+    |   LIT_ENTERO:lit {:
+            var info = new NodeInfo(litxleft.getLine(), litxright.getColumn(), filename);
+            RESULT = new Literal(info, PrimitiveType.ENT, lit);
+        :}
+    |   LIT_STRING:lit {:
+            var info = new NodeInfo(litxleft.getLine(), litxright.getColumn(), filename);
+            RESULT = new CharacterArray(info, lit);
+        :}
+    |   NULL {: RESULT = NloLiteral.getInstance(); :}
+    |   IncreaseDecrease:a {: RESULT = a; :}
+;

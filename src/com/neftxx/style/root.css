@@ -1,0 +1,13 @@
+.root {
+    -fx-background-color: #3c3f41;
+}
+
+.split-pane {
+    -fx-background-color: #3c3f41;
+    -fx-border-color: #535353;
+}
+
+.split-pane *.split-pane-divider {
+    -fx-padding: 0 1 0 1;
+    -fx-background-color: #535353;
+}

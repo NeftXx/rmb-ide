@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>com.neftxx.App</OriginalElement>
+  <nodes>
+    <node x="458.0" y="804.0">com.neftxx.evaluator.CodeExecutor</node>
+    <node x="752.0" y="640.0">com.neftxx.olc.Olc</node>
+    <node x="0.0" y="640.0">com.neftxx.scope.Binding</node>
+    <node x="174.0" y="804.0">com.neftxx.evaluator.Source</node>
+    <node x="316.0" y="804.0">com.neftxx.type.RmbType</node>
+    <node x="382.0" y="373.0">com.neftxx.util.SymbolNode</node>
+    <node x="729.0" y="373.0">com.neftxx.util.DialogUtils</node>
+    <node x="0.0" y="946.0">com.neftxx.util.FileManager</node>
+    <node x="170.0" y="946.0">com.neftxx.util.Action</node>
+    <node x="354.0" y="640.0">com.neftxx.olc.Parser</node>
+    <node x="550.0" y="373.0">com.neftxx.error.NodeError</node>
+    <node x="57.75" y="373.0">com.neftxx.ast.AstNode</node>
+    <node x="0.0" y="520.0">com.neftxx.ast.expression.Expression</node>
+    <node x="196.0" y="640.0">com.neftxx.error.TypeError</node>
+    <node x="0.0" y="804.0">com.neftxx.util.NodeInfo</node>
+    <node x="553.0" y="640.0">com.neftxx.evaluator.Parser</node>
+    <node x="682.0" y="804.0">com.neftxx.error.ErrorHandler</node>
+    <node x="339.0" y="0.0">com.neftxx.evaluator.Lexer</node>
+    <node x="24.5" y="0.0">com.neftxx.scope.Scope</node>
+    <node x="145.0" y="520.0">com.neftxx.ast.Program</node>
+    <node x="0.0" y="167.0">com.neftxx.scope.FileScope</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="com.neftxx.scope.FileScope" target="com.neftxx.scope.Scope">
+      <point x="0.0" y="-80.5" />
+      <point x="0.0" y="58.5" />
+    </edge>
+    <edge source="com.neftxx.ast.expression.Expression" target="com.neftxx.ast.AstNode">
+      <point x="0.0" y="-37.5" />
+      <point x="62.5" y="495.0" />
+      <point x="104.75" y="495.0" />
+      <point x="-47.0" y="48.5" />
+    </edge>
+    <edge source="com.neftxx.ast.Program" target="com.neftxx.ast.AstNode">
+      <point x="0.0" y="-37.5" />
+      <point x="241.0" y="495.0" />
+      <point x="198.75" y="495.0" />
+      <point x="47.0" y="48.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.8826998689384009" x="582.6963622865628" y="664.8032665181886" />
+  <SelectedNodes>
+    <node>com.neftxx.evaluator.CodeExecutor</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Fields</Category>
+    <Category>Properties</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>public</VISIBILITY>
+</Diagram>
+
